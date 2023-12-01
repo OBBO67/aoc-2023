@@ -37,6 +37,8 @@ pub fn part1(input: &str) -> i32 {
 }
 
 pub fn part2(input: &str) -> i32 {
+    // leave first and last character of digit words
+    // to solve the issue with overlaps
     let array = [
         ("one", "o1e"),
         ("two", "t2o"),
