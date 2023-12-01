@@ -36,6 +36,34 @@ pub fn part1(input: &str) -> i32 {
         .sum()
 }
 
+pub fn part2(input: &str) -> i32 {
+    let array = [
+        ("one", "o1e"),
+        ("two", "t2o"),
+        ("three", "t3e"),
+        ("four", "f4r"),
+        ("five", "f5e"),
+        ("six", "s6x"),
+        ("seven", "s7n"),
+        ("eight", "e8t"),
+        ("nine", "n9e"),
+    ];
+
+    input
+        .lines()
+        .map(|line| {
+            let mut new_line = String::from(line);
+            for x in array {
+                new_line = new_line.replace(x.0, x.1);
+            }
+
+            new_line
+        })
+        .map(|line| line.parse::<CalibartionValue>().unwrap().value)
+        .map(|value| value.parse::<i32>().unwrap())
+        .sum()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -45,6 +73,12 @@ mod tests {
     #[test]
     fn part1_test() {
         let result = part1(INPUT);
-        assert_eq!(result, 142);
+        assert_eq!(result, 54877);
+    }
+
+    #[test]
+    fn part2_test() {
+        let result = part2(INPUT);
+        assert_eq!(result, 54100);
     }
 }
