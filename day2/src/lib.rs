@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{cmp, str::FromStr};
 
 #[derive(Default)]
 struct CubeSet {
@@ -20,6 +20,18 @@ impl Game {
             }
         }
         true
+    }
+
+    fn min_cubes_required(&self) -> CubeSet {
+        let mut cube_set = CubeSet::default();
+
+        for set in &self.cube_sets {
+            cube_set.blue = cmp::max(cube_set.blue, set.blue);
+            cube_set.green = cmp::max(cube_set.green, set.green);
+            cube_set.red = cmp::max(cube_set.red, set.red);
+        }
+
+        cube_set
     }
 }
 
@@ -75,6 +87,17 @@ pub fn part1(input: &str) -> u32 {
         .sum()
 }
 
+pub fn part2(input: &str) -> u32 {
+    input
+        .lines()
+        .map(|line| line.parse::<Game>().unwrap())
+        .map(|game| {
+            let min_cube_set = game.min_cubes_required();
+            min_cube_set.blue * min_cube_set.green * min_cube_set.red
+        })
+        .sum()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -84,6 +107,12 @@ mod tests {
     #[test]
     fn part1_test() {
         let result = part1(INPUT);
-        assert_eq!(result, 2169);
+        assert_eq!(result, 8);
+    }
+
+    #[test]
+    fn part2_test() {
+        let result = part2(INPUT);
+        assert_eq!(result, 2286);
     }
 }
