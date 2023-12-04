@@ -1,4 +1,3 @@
-use core::num;
 use std::str::FromStr;
 
 #[derive(Debug)]
@@ -8,6 +7,7 @@ struct Card {
     numbers: Vec<u32>,
     card_winning_nums: u32,
     card_points: u32,
+    copies: u32,
 }
 
 impl Card {
@@ -58,6 +58,7 @@ impl FromStr for Card {
             numbers,
             card_winning_nums: 0,
             card_points: 0,
+            copies: 1,
         })
     }
 }
@@ -75,6 +76,29 @@ pub fn part1(input: &str) -> u32 {
     total_card_points
 }
 
+pub fn part2(input: &str) -> u32 {
+    let mut cards: Vec<Card> = input
+        .lines()
+        .map(|line| {
+            let mut card = line.parse::<Card>().unwrap();
+            card.count_winning_numbers();
+            card
+        })
+        .collect();
+
+    for idx in 0..cards.len() {
+        let num_of_winning_cards = cards[idx].card_winning_nums as usize;
+        let copies_curr_card = cards[idx].copies;
+        let winning_copies = &mut cards[(idx + 1)..(idx + num_of_winning_cards + 1)];
+
+        for winning_copy in winning_copies.iter_mut() {
+            winning_copy.copies = winning_copy.copies + copies_curr_card;
+        }
+    }
+
+    cards.into_iter().map(|card| card.copies).sum()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -85,5 +109,11 @@ mod tests {
     fn part1_test() {
         let result = part1(INPUT);
         assert_eq!(result, 13);
+    }
+
+    #[test]
+    fn part2_test() {
+        let result = part2(INPUT);
+        assert_eq!(result, 30);
     }
 }
