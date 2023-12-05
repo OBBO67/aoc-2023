@@ -1,13 +1,54 @@
 use std::{collections::HashMap, ops::Range, str::FromStr};
 
+struct Almanac {
+    seeds: Vec<i64>,
+    mappings: Vec<Mapping>,
+}
+
+impl Almanac {
+    fn get_seed_locations(&self) -> Vec<i64> {
+        self.seeds
+            .iter()
+            .map(|seed| {
+                let mut seed_location = *seed;
+                for mapping in &self.mappings {
+                    seed_location = mapping.get_dest_from_src(seed_location);
+                }
+                seed_location
+            })
+            .collect()
+    }
+}
+
+impl FromStr for Almanac {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let (seeds, mappings) = s.split_once("\n").unwrap();
+        let (_, seeds) = seeds.split_once(": ").unwrap();
+        let seeds: Vec<i64> = seeds
+            .split_whitespace()
+            .map(|seed| seed.parse::<i64>().unwrap())
+            .collect();
+        let mappings: Vec<Mapping> = mappings
+            .trim()
+            .split("\n\n")
+            .map(|map_entry| map_entry.parse::<Mapping>().unwrap())
+            .collect();
+
+        Ok(Almanac { seeds, mappings })
+    }
+}
+
+#[derive(Debug)]
 struct Mapping {
     src: String,
     dest: String,
-    range_map: HashMap<Range<i32>, Range<i32>>,
+    range_map: HashMap<Range<i64>, Range<i64>>,
 }
 
 impl Mapping {
-    fn get_dest_from_src(&self, src: i32) -> i32 {
+    fn get_dest_from_src(&self, src: i64) -> i64 {
         for src_range in self.range_map.keys() {
             if src_range.contains(&src) {
                 let dest_range = self.range_map.get(src_range).unwrap();
@@ -39,9 +80,9 @@ impl FromStr for Mapping {
 
         for mapping in mappings {
             let mapping: Vec<&str> = mapping.splitn(3, ' ').collect();
-            let dest_start = mapping[0].parse::<i32>().unwrap();
-            let src_start = mapping[1].parse::<i32>().unwrap();
-            let range = mapping[2].parse::<i32>().unwrap();
+            let dest_start = mapping[0].parse::<i64>().unwrap();
+            let src_start = mapping[1].parse::<i64>().unwrap();
+            let range = mapping[2].parse::<i64>().unwrap();
 
             let dest_end = dest_start + range;
             let src_end = src_start + range;
@@ -60,11 +101,11 @@ impl FromStr for Mapping {
 
 // dest range start, src range start, range length
 // upper num = (range start - 1) + range length
-pub fn part1(input: &str) -> u32 {
-    let parts: Vec<&str> = input.lines().collect();
-    println!("{:?}", parts);
-
-    todo!()
+pub fn part1(input: &str) -> i64 {
+    let almanac = input.parse::<Almanac>().unwrap();
+    let locations = almanac.get_seed_locations();
+    println!("{:?}", locations);
+    *locations.iter().min().unwrap()
 }
 
 #[cfg(test)]
@@ -97,6 +138,6 @@ mod tests {
     #[test]
     fn part1_test() {
         let result = part1(INPUT);
-        assert_eq!(result, 4);
+        assert_eq!(result, 35);
     }
 }
