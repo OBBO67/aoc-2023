@@ -1,7 +1,10 @@
-use std::{collections::HashMap, ops::Range, str::FromStr};
+use std::{cmp, collections::HashMap, ops::Range, str::FromStr};
+
+use regex::Regex;
 
 struct Almanac {
     seeds: Vec<i64>,
+    seed_ranges: Vec<Range<i64>>,
     mappings: Vec<Mapping>,
 }
 
@@ -18,25 +21,84 @@ impl Almanac {
             })
             .collect()
     }
+
+    fn get_seed_location_ranges(&mut self) -> Vec<Range<i64>> {
+        for mapping in &self.mappings {
+            let mut seed_location_ranges = vec![];
+
+            while !self.seed_ranges.is_empty() {
+                let seed_range = self.seed_ranges.pop().unwrap();
+                let mut range_found = false;
+
+                for (src_range, dest_range) in &mapping.range_map {
+                    let overlap_start = cmp::max(seed_range.start, src_range.start);
+                    let overlap_end = cmp::min(seed_range.end, src_range.end);
+                    let offset = dest_range.start - src_range.start;
+
+                    if overlap_start < overlap_end {
+                        seed_location_ranges.push(overlap_start + offset..overlap_end + offset);
+
+                        // check for sub-segments that didn't overlap
+                        if overlap_start > seed_range.start {
+                            self.seed_ranges.push(seed_range.start..overlap_start);
+                        }
+
+                        if seed_range.end > overlap_end {
+                            self.seed_ranges.push(overlap_end..seed_range.end);
+                        }
+
+                        range_found = true;
+                        break;
+                    }
+                }
+
+                if !range_found {
+                    seed_location_ranges.push(seed_range);
+                }
+            }
+
+            self.seed_ranges = seed_location_ranges;
+        }
+
+        self.seed_ranges.clone()
+    }
 }
 
 impl FromStr for Almanac {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (seeds, mappings) = s.split_once("\n").unwrap();
-        let (_, seeds) = seeds.split_once(": ").unwrap();
-        let seeds: Vec<i64> = seeds
+        let (seeds_line, mappings) = s.split_once("\n").unwrap();
+        let (_, seeds_line) = seeds_line.split_once(": ").unwrap();
+        let seeds: Vec<i64> = seeds_line
             .split_whitespace()
             .map(|seed| seed.parse::<i64>().unwrap())
             .collect();
+
+        let re = Regex::new(r"[0-9]+\s[0-9]+").unwrap();
+        let matches: Vec<&str> = re.find_iter(seeds_line).map(|mat| mat.as_str()).collect();
+
+        let seed_ranges: Vec<Range<i64>> = matches
+            .into_iter()
+            .map(|range| {
+                let (start, len) = range.split_once(' ').unwrap();
+                let start = start.parse::<i64>().unwrap();
+                let len = len.parse::<i64>().unwrap();
+                start..start + len
+            })
+            .collect();
+
         let mappings: Vec<Mapping> = mappings
             .trim()
             .split("\n\n")
             .map(|map_entry| map_entry.parse::<Mapping>().unwrap())
             .collect();
 
-        Ok(Almanac { seeds, mappings })
+        Ok(Almanac {
+            seeds,
+            seed_ranges,
+            mappings,
+        })
     }
 }
 
@@ -104,8 +166,14 @@ impl FromStr for Mapping {
 pub fn part1(input: &str) -> i64 {
     let almanac = input.parse::<Almanac>().unwrap();
     let locations = almanac.get_seed_locations();
-    println!("{:?}", locations);
     *locations.iter().min().unwrap()
+}
+
+pub fn part2(input: &str) -> i64 {
+    let mut almanac = input.parse::<Almanac>().unwrap();
+    let mut location_ranges = almanac.get_seed_location_ranges();
+    location_ranges.sort_by(|a, b| a.start.cmp(&b.start));
+    location_ranges[0].start
 }
 
 #[cfg(test)]
@@ -139,5 +207,11 @@ mod tests {
     fn part1_test() {
         let result = part1(INPUT);
         assert_eq!(result, 35);
+    }
+
+    #[test]
+    fn part2_test() {
+        let result = part2(INPUT);
+        assert_eq!(result, 46);
     }
 }
