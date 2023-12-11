@@ -1,8 +1,4 @@
-use std::{
-    cmp::Ordering,
-    collections::{HashMap, HashSet},
-    str::FromStr,
-};
+use std::{cmp::Ordering, collections::HashMap, str::FromStr};
 
 #[derive(PartialEq, PartialOrd, Debug, Eq, Ord)]
 enum HandType {
@@ -27,7 +23,6 @@ struct CamelCardJoker {
     hand: Vec<char>,
     bid: u32,
     hand_type: HandType,
-    joker_cards: u8,
 }
 
 impl CamelCard {
@@ -89,13 +84,11 @@ impl FromStr for CamelCard {
             };
         }
 
-        let unique_cards = hand.iter().map(|c| *c).collect::<HashSet<char>>();
-
-        let hand_type = match unique_cards.len() {
+        let hand_type = match hand_cnt_map.values().len() {
             1 => HandType::FiveKind,
             2 => {
                 let mut hand_type = HandType::FullHouse;
-                for (card, cnt) in hand_cnt_map.into_iter() {
+                for (_, cnt) in hand_cnt_map.into_iter() {
                     // if card is joker then add to the highest count.
 
                     if cnt == 1 || cnt == 4 {
@@ -149,14 +142,15 @@ impl FromStr for CamelCardJoker {
                         let new_cnt = *cnt + 1;
                         hand_cnt_map.insert(*c, new_cnt);
                         if new_cnt >= max_key_value.1 {
+                            max_key_value = (*c, new_cnt);
+                        } else if new_cnt == max_key_value.1 {
+                            // max card count is equal but we need to change to the max valued card
                             let curr_max_card =
                                 CamelCardJoker::get_card_rank_with_joker(max_key_value.0);
 
                             if CamelCardJoker::get_card_rank_with_joker(*c) > curr_max_card {
                                 max_key_value.0 = *c;
                             }
-
-                            max_key_value.1 = new_cnt;
                         }
                     }
                 }
@@ -184,8 +178,6 @@ impl FromStr for CamelCardJoker {
             // all jokers
             hand_cnt_map.insert('A', 5);
         }
-
-        // println!("{:?}", hand_cnt_map);
 
         let hand_type = match hand_cnt_map.values().len() {
             1 => HandType::FiveKind,
@@ -218,7 +210,6 @@ impl FromStr for CamelCardJoker {
             hand,
             bid: bid.parse::<u32>().unwrap(),
             hand_type,
-            joker_cards: joker_cnt,
         })
     }
 }
@@ -291,14 +282,13 @@ pub fn part2(input: &str) -> u32 {
             Ordering::Equal
         }
     });
-
-    println!("{:?}", camel_cards);
     println!("{}", camel_cards.len());
 
     let mut total = 0;
     let mut multiplier = 1;
 
     for camel_card in &camel_cards {
+        println!("{:?}", camel_card);
         total = total + (camel_card.bid * multiplier);
         multiplier = multiplier + 1;
     }
@@ -311,73 +301,71 @@ mod tests {
     use super::HandType::*;
     use super::*;
 
-    const INPUT: &'static str = include_str!("../INPUT.txt");
+    const INPUT: &'static str = include_str!("../input.txt");
 
-    // #[test]
-    // fn hand_type_test() {
-    //     assert!(Pair > HighCard);
-    //     assert!(ThreeKind > Pair);
-    //     assert!(FullHouse > ThreeKind);
-    //     assert!(FourKind > FullHouse);
-    //     assert!(FiveKind > FourKind);
-    // }
+    #[test]
+    fn hand_type_test() {
+        assert!(Pair > HighCard);
+        assert!(ThreeKind > Pair);
+        assert!(FullHouse > ThreeKind);
+        assert!(FourKind > FullHouse);
+        assert!(FiveKind > FourKind);
+    }
 
-    // #[test]
-    // fn camel_card_parse_test() {
-    //     let three_kind_line = "QQQJA 483";
-    //     let four_kind_line = "QQQQA 483";
-    //     let full_house_line = "QQQAA 483";
+    #[test]
+    fn camel_card_parse_test() {
+        let three_kind_line = "QQQJA 483";
+        let four_kind_line = "QQQQA 483";
+        let full_house_line = "QQQAA 483";
 
-    //     let three_kind_hand = three_kind_line.parse::<CamelCard>().unwrap();
-    //     let four_kind_hand = four_kind_line.parse::<CamelCard>().unwrap();
-    //     let full_house_hand = full_house_line.parse::<CamelCard>().unwrap();
+        let three_kind_hand = three_kind_line.parse::<CamelCard>().unwrap();
+        let four_kind_hand = four_kind_line.parse::<CamelCard>().unwrap();
+        let full_house_hand = full_house_line.parse::<CamelCard>().unwrap();
 
-    //     assert_eq!(three_kind_hand.bid, 483);
-    //     assert_eq!(three_kind_hand.hand_type, ThreeKind);
-    //     assert_eq!(four_kind_hand.hand_type, FourKind);
-    //     assert_eq!(full_house_hand.hand_type, FullHouse);
-    // }
+        assert_eq!(three_kind_hand.bid, 483);
+        assert_eq!(three_kind_hand.hand_type, ThreeKind);
+        assert_eq!(four_kind_hand.hand_type, FourKind);
+        assert_eq!(full_house_hand.hand_type, FullHouse);
+    }
 
-    // #[test]
-    // fn camel_card_joker_parse_test() {
-    //     let four_kind_with_jack_hand = "QQQJA 483".parse::<CamelCardJoker>().unwrap();
-    //     let four_kind_hand = "QQQQA 483".parse::<CamelCardJoker>().unwrap();
-    //     let full_house_hand = "QQJAA 483".parse::<CamelCardJoker>().unwrap();
-    //     let high_card_hand = "TAK97 148".parse::<CamelCardJoker>().unwrap();
-    //     let all_joker_hand = "JJJJJ 171".parse::<CamelCardJoker>().unwrap();
-    //     let pair_kings = "TK2J7 116".parse::<CamelCardJoker>().unwrap();
-    //     let four_nines = "99992 721".parse::<CamelCardJoker>().unwrap();
+    #[test]
+    fn camel_card_joker_parse_test() {
+        let four_kind_with_jack_hand = "QQQJA 483".parse::<CamelCardJoker>().unwrap();
+        let four_kind_hand = "QQQQA 483".parse::<CamelCardJoker>().unwrap();
+        let full_house_hand = "QQJAA 483".parse::<CamelCardJoker>().unwrap();
+        let high_card_hand = "TAK97 148".parse::<CamelCardJoker>().unwrap();
+        let all_joker_hand = "JJJJJ 171".parse::<CamelCardJoker>().unwrap();
+        let pair_kings = "TK2J7 116".parse::<CamelCardJoker>().unwrap();
+        let four_nines = "99992 721".parse::<CamelCardJoker>().unwrap();
+        let four_sixes_with_jack = "AJ666 222".parse::<CamelCardJoker>().unwrap();
 
-    //     assert_eq!(four_kind_with_jack_hand.bid, 483);
-    //     assert_eq!(four_kind_with_jack_hand.hand_type, FourKind);
-    //     assert_eq!(four_kind_hand.hand_type, FourKind);
-    //     assert_eq!(full_house_hand.hand_type, FullHouse);
-    //     assert_eq!(high_card_hand.hand_type, HighCard);
-    //     assert_eq!(all_joker_hand.hand_type, FiveKind);
-    //     assert_eq!(pair_kings.hand_type, Pair);
-    //     assert_eq!(four_nines.hand_type, FourKind);
-    // }
+        assert_eq!(four_kind_with_jack_hand.bid, 483);
+        assert_eq!(four_kind_with_jack_hand.hand_type, FourKind);
+        assert_eq!(four_kind_hand.hand_type, FourKind);
+        assert_eq!(full_house_hand.hand_type, FullHouse);
+        assert_eq!(high_card_hand.hand_type, HighCard);
+        assert_eq!(all_joker_hand.hand_type, FiveKind);
+        assert_eq!(pair_kings.hand_type, Pair);
+        assert_eq!(four_nines.hand_type, FourKind);
+        assert_eq!(four_sixes_with_jack.hand_type, FourKind);
+    }
 
-    // #[test]
-    // fn part1_test() {
-    //     let result = part1(INPUT);
-    //     assert_eq!(result, 6440);
-    // }
+    #[test]
+    fn part1_test() {
+        let result = part1(INPUT);
+        assert_eq!(result, 6440);
+    }
 
-    // #[test]
-    // fn part2_mini_test() {
-    //     let input = "AAAJJ 1\nAJAAA 2";
-    //     let result = part2(input);
-    //     assert_eq!(result, 5);
-    // }
+    #[test]
+    fn part2_mini_test() {
+        let input = "AAAJJ 1\nAJAAA 2";
+        let result = part2(input);
+        assert_eq!(result, 4);
+    }
 
     #[test]
     fn part2_test() {
         let result = part2(INPUT);
-        // 248656191
-        // 248552368
-        // 248673864
-        // 248713041
-        assert_eq!(result, 248713230);
+        assert_eq!(result, 5905);
     }
 }
